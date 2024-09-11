@@ -146,7 +146,45 @@ class Major:
             return data.get("rating_award", 0)
         
         return 0
-    
+
+    def solve_puzzle(self, token, proxies=None):
+        with open('puzzle.txt', 'r') as file:
+            puzzle_choices = file.read().strip()
+
+        choice_list = [int(choice) for choice in puzzle_choices.split(',')]
+
+        payload = {
+            "choice_1": choice_list[0],
+            "choice_2": choice_list[1],
+            "choice_3": choice_list[2],
+            "choice_4": choice_list[3]
+        }
+
+        url = 'https://major.bot/api/durov/'
+        data = self.request("POST", url, token, json=payload, proxies=proxies)
+
+        if isinstance(data, str):
+            try:
+                data = json.loads(data)
+            except json.JSONDecodeError as e:
+                log(kng + f"Error parsing response as JSON: {str(e)}")
+                return 0
+
+        if data:
+            if data.get("correct", False):
+                return True
+
+            detail = data.get("detail", {})
+            blocked_until = detail.get("blocked_until")
+
+            if blocked_until is not None:
+                blocked_until_time = datetime.fromtimestamp(blocked_until).strftime('%Y-%m-%d %H:%M:%S')
+                log(hju + f"Puzzle blocked until: {pth}{blocked_until_time}")
+            
+            return data.get("rating_award", 0)
+        
+        return 0
+      
     def squad(self, token, squad_id, proxies=None):
         url = f"https://major.glados.app/api/squads/{squad_id}/join/"
         response = self.request("POST", url, token, proxies=proxies)
@@ -226,6 +264,9 @@ class Major:
                             auto_spin = self.spin(token)
                             if auto_spin:
                                 log(hju + f"Spin Success | Reward {pth}{auto_spin:,} {hju}points")
+                            durov_puzzle = self.solve_puzzle(token)
+                            if durov_puzzle:
+                                log(hju + f"Puzzle Complete | Reward +{pth}5000 {hju}points")                            
                                 
                         log_line()
                     else:
