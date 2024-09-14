@@ -15,7 +15,7 @@ To use this bot, you need to register it with the Major Telegram Bot.
 
 ## Features
 
-- **Puzzle**: Semi-automatic Solve Durov Puzzle `NEW` add puzzle number to puzzle.txt separated with (,) coma eg: `8,1,14,11` " BOX NUMBER "
+- **Puzzle**: Semi-automatic Solve Durov Puzzle `NEW` add puzzle number to puzzle.txt separated with (,) coma eg: `8,1,14,11` its the " BOX NUMBER "
 - **Check In**: Automatically check in and increase the visit count.
 - **Task Management**: Retrieve and complete daily tasks.
 - **Coin Holding**: Play the hold coin game with a random amount.
@@ -107,7 +107,7 @@ To use this bot, you need to register it with the Major Telegram Bot.
 To run the bot, execute the following command:
 
 ```bash
-python major_bot.py
+python bot.py
 ```
 
 ## License
