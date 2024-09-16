@@ -24,7 +24,7 @@ def _banner():
  ╚═╝   ╚═╝   ╚══════╝ ╚════╝ ╚═╝  ╚═╝ ╚══╝╚══╝  """ 
     print(Fore.GREEN + Style.BRIGHT + banner + Style.RESET_ALL)
     print(hju + f" Major Telegram Auto Bot")
-    print(mrh + f" NOT FOR SALE = Free to use")
+    print(mrh + f" FREE TO USE = Join us on {pth}t.me/DEEPLCHAIN")
     print(mrh + f" before start please '{hju}git pull{mrh}' to update bot")
     log_line()
 
@@ -51,16 +51,6 @@ def log(message, **kwargs):
 
 def log_line():
     print(pth + "~" * 60)
-
-def load_fake_file(filepath):
-    with open(filepath, 'r') as file:
-        fake_ips = json.load(file)
-    return fake_ips
-
-def awak():
-    _clear()
-    _banner()
-    log_line()
 
 def countdown_timer(seconds):
     while seconds:

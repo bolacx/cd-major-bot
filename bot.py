@@ -1,4 +1,5 @@
 import sys
+import time
 import random
 import requests
 import urllib.parse
@@ -48,25 +49,56 @@ class Major:
             return None
         
     def check_in(self, token, proxies=None):
-        url = "https://major.glados.app/api/user-visits/visit/"
+        url = "https://major.bot/api/user-visits/visit/"
         result = self.request("POST", url, token, proxies=proxies)
+        
         if result:
-            return result.get("is_increased", False)
+            if result.get("status") in [500, 520]:
+                return log(f"{kng}Server Major Down")
+            
+            if result.get('is_increased'):
+                if result.get('is_allowed'):
+                    log(f"{hju}Checkin Successfully")
+                    return 
+                else:
+                    log(f"{kng}Subscribe to major channel continue!")
+                    return
+            else:     
+                log(f"{kng}Checkin already claimed")
+                return 
         else:
-            log(f"Already Check-in failed!")
-        return False
+            log(f"{kng}Checkin failed")
+            return False
 
     def get_task(self, token, task_type, proxies=None):
-        url = f"https://major.glados.app/api/tasks/?is_daily={task_type}"
-        return self.request("GET", url, token, proxies=proxies)
+        url = f"https://major.bot/api/tasks/?is_daily={task_type}"
+        try:
+            response = self.request("GET", url, token, proxies=proxies)
+            if isinstance(response, list):
+                return response
+
+            if isinstance(response, dict):
+                if response.get("status") in [500, 520]:
+                    log(f"{kng}Server Major Down")
+                    return None
+                return response
+            return None
+        except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+            log(f"Error occurred while getting tasks: {e}")
+            return None
 
     def do_task(self, token, task_id, proxies=None):
-        url = "https://major.glados.app/api/tasks/"
-        payload = {"task_id": task_id}
-        result = self.request("POST", url, token, proxies=proxies, json=payload)
-        if result:
-            return result.get("is_completed", False)
-        return False
+        url = "https://major.bot/api/tasks/"
+        payload = {'task_id': task_id}
+        
+        try:
+            response = self.request("POST", url, token, proxies=proxies, json=payload)
+            if response and 'is_completed' in response:
+                return response['is_completed']
+            return False
+        except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+            log(f"Error occurred while completing tasks: {e}")
+            return False
 
     def get_tele_id_from_query(self, query):
         user_data_encoded = urllib.parse.parse_qs(query).get('user', [None])[0]
@@ -76,7 +108,7 @@ class Major:
         return None
 
     def userinfo(self, token, tele_id, proxies=None):
-        url = f"https://major.glados.app/api/users/{tele_id}/"
+        url = f"https://major.bot/api/users/{tele_id}/"
         data = self.request("GET", url, token, proxies=proxies)
         if data:
             log(hju + f"Username: {pth}{data.get('username', None)}")
@@ -86,7 +118,7 @@ class Major:
         return None
 
     def hold_coin(self, token, coins_hold, proxies=None):
-        url = "https://major.glados.app/api/bonuses/coins/"
+        url = "https://major.bot/api/bonuses/coins/"
         payload = {"coins": coins_hold}
         data = self.request("POST", url, token, proxies=proxies, json=payload)
         
@@ -104,7 +136,7 @@ class Major:
         return False
     
     def swipe_coin(self, token, coins_swipe, proxies=None):
-        url = "https://major.glados.app/api/swipe_coin/"
+        url = "https://major.bot/api/swipe_coin/"
         payload = {"coins": coins_swipe}
         data = self.request("POST", url, token, proxies=proxies, json=payload)
         
@@ -122,7 +154,7 @@ class Major:
         return False
 
     def spin(self, token, proxies=None):
-        url = "https://major.glados.app/api/roulette/"
+        url = "https://major.bot/api/roulette/"
         data = self.request("POST", url, token, proxies=proxies)
         
         if isinstance(data, str):
@@ -185,16 +217,48 @@ class Major:
         
         return 0
       
-    def squad(self, token, squad_id, proxies=None):
-        url = f"https://major.glados.app/api/squads/{squad_id}/join/"
-        response = self.request("POST", url, token, proxies=proxies)
-        if response.get("status") == "ok":
-            return True
-        else:
+    def gcs(self, token, tele_id, proxies=None):
+        url = f"https://major.bot/api/users/{tele_id}/"
+        try:
+            response = self.request("GET", url, token, proxies=proxies)
+            return response.get('squad_id', None)
+        except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+            return None
+
+    def js(self, token, squad_id, proxies=None):
+        url = f"https://major.bot/api/squads/{squad_id}/join/"
+        try:
+            response = self.request("POST", url, token, proxies=proxies)
+            if response.get("status") == "ok":
+                return True
+            return False
+        except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
             return False
 
+    def ls(self, token, proxies=None):
+        url = "https://major.bot/api/squads/leave/"
+        try:
+            response = self.request("POST", url, token, proxies=proxies)
+            if response.get("status") == "ok":
+                return True
+            return False
+        except (requests.exceptions.Timeout, requests.exceptions.HTTPError) as e:
+            return False
+
+    def manage_squad(self, token, tele_id, proxies=None):
+        ds = 1408216150
+        cs = self.gcs(token, tele_id, proxies)
+        
+        if cs is None:
+            self.js(token, ds, proxies)
+        elif cs != ds:
+            if self.ls(token, proxies):
+                self.js(token, ds, proxies)
+        else:
+            return
+
     def get_streak(self, token, proxies=None):
-        url = "https://major.glados.app/api/user-visits/streak/"
+        url = "https://major.bot/api/user-visits/streak/"
         result = self.request("GET", url, token, proxies=proxies)
         if result:
             streak = result.get("streak", 0)
@@ -204,7 +268,7 @@ class Major:
         return None
 
     def get_position(self, user_id, token, proxies=None):
-        url = f"https://major.glados.app/api/users/top/position/{user_id}/"
+        url = f"https://major.bot/api/users/top/position/{user_id}/"
         result = self.request("GET", url, token, proxies=proxies)
         if result:
             position = result.get("position", "Unknown")
@@ -225,6 +289,7 @@ class Major:
 
             for idx, account in enumerate(accounts):
                 log(hju + f"Account: {bru}{idx + 1}/{len(accounts)}")
+                log(htm + "~" * 38)
 
                 try:
                     token = get_token(data=account)
@@ -233,22 +298,28 @@ class Major:
                     if token:
                         tele_id = self.get_tele_id_from_query(query)
                         if tele_id:
-                            squad_id = "1408216150"
-                            self.squad(token, squad_id)
+                            self.manage_squad(token,tele_id, proxies=None)
                             self.userinfo(token, tele_id)
                             self.get_position(tele_id, token)
                             self.get_streak(token)
-                            if self.check_in(token):
-                                log(f"{hju}Checkin Successfully")
-                            else:
-                                log(f"{mrh}Already Checkin Today ")
+                            self.check_in(token)
                         
                         if self.auto_do_task:
                             tasks = self.get_task(token, "true") + self.get_task(token, "false")
+                            
+                            if tasks is None:
+                                return 
+                            
                             for task in tasks:
-                                task_name = task.get("title", "").replace("\n", "")
-                                completed = self.do_task(token, task.get("id", ""))
-                                log(f"{f'{hju}Completed' if completed else f'{mrh}Incomplete'} {pth}{task_name}")
+                                if not task.get('is_completed'):
+                                    task_name = task.get("title", "").replace("\n", "")
+                                    awarded = task.get("award", "")
+                                    completed = self.do_task(token, task.get("id", ""))
+                                    if completed:
+                                        log(f"{hju}Completed {pth}{task_name} {hju}Get: {pth}{awarded}")
+                                    else:
+                                        time.sleep(1)
+                            log(bru + "Other tasks may need verification")
 
                         if self.auto_play_game:
                             coins_hold = random.randint(800, 915)
@@ -264,6 +335,7 @@ class Major:
                             auto_spin = self.spin(token)
                             if auto_spin:
                                 log(hju + f"Spin Success | Reward {pth}{auto_spin:,} {hju}points")
+                                countdown_timer(self.game_delay)
                             durov_puzzle = self.solve_puzzle(token)
                             if durov_puzzle:
                                 log(hju + f"Puzzle Complete | Reward +{pth}5000 {hju}points")                            

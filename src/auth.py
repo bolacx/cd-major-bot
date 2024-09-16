@@ -3,7 +3,7 @@ from .headers import headers
 
 
 def get_token(data, proxies=None):
-    url = "https://major.glados.app/api/auth/tg/"
+    url = "https://major.bot/api/auth/tg/"
     payload = {"init_data": data}
 
     try:
