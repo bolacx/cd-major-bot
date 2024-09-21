@@ -30,9 +30,18 @@ class Major:
                 proxy_list = f.read().splitlines()
                 proxies = []
                 for proxy in proxy_list:
+
+                    if '@' in proxy:
+                        host_port = proxy.split('@')[1]
+                    else:
+                        host_port = proxy
+                    
+                    host, port = host_port.split(':')
                     proxies.append({
-                        'http': f'http://{proxy}',
-                        'https': f'https://{proxy}'
+                        'http': f'http://{host}:{port}',
+                        'https': f'https://{host}:{port}',
+                        'host': host,
+                        'port': port
                     })
                 return proxies
         except Exception as e:
@@ -180,54 +189,42 @@ class Major:
         return 0
 
     def solve_puzzle(self, token, proxies=None):
-        try:
-            with open('puzzle.txt', 'r') as file:
-                puzzle_choices = file.read().strip()
-            if not puzzle_choices:
-                log(mrh + f"Error: {pth}puzzle.txt {mrh}is empty")
-                return 0
-            choice_list = puzzle_choices.split(',')
-            if len(choice_list) < 4:
-                log(mrh + f"Choices in puzzle.txt, found {pth}{len(choice_list)}{mrh}, expected {pth}4")
-                return 0
+        with open('puzzle.txt', 'r') as file:
+            puzzle_choices = file.read().strip()
+
+        choice_list = [int(choice) for choice in puzzle_choices.split(',')]
+
+        payload = {
+            "choice_1": choice_list[0],
+            "choice_2": choice_list[1],
+            "choice_3": choice_list[2],
+            "choice_4": choice_list[3]
+        }
+
+        url = 'https://major.bot/api/durov/'
+        data = self.request("POST", url, token, json=payload, proxies=proxies)
+
+        if isinstance(data, str):
             try:
-                choice_list = [int(choice.strip()) for choice in choice_list if choice.strip()]
-            except ValueError as e:
-                log(mrh + f"Error: {kng}Invalid choice in puzzle.txt - {pth}{str(e)}")
+                data = json.loads(data)
+            except json.JSONDecodeError as e:
+                log(kng + f"Error parsing response as JSON: {str(e)}")
                 return 0
-            if len(choice_list) < 4:
-                log(mrh + f"Error: {kng}Not enough valid choices after parsing. Found {pth}{len(choice_list)}{mrh}, expected {pth}4")
-                return 0
-            payload = {
-                "choice_1": choice_list[0],
-                "choice_2": choice_list[1],
-                "choice_3": choice_list[2],
-                "choice_4": choice_list[3]
-            }
-            url = 'https://major.bot/api/durov/'
-            data = self.request("POST", url, token, json=payload, proxies=proxies)
-            if isinstance(data, str):
-                try:
-                    data = json.loads(data)
-                except json.JSONDecodeError as e:
-                    log(mrh + f"Error parsing response as JSON: {kng}{str(e)}")
-                    return 0
-            if data:
-                if data.get("correct", False):
-                    return True
-                detail = data.get("detail", {})
-                blocked_until = detail.get("blocked_until")
-                if blocked_until is not None:
-                    blocked_until_time = datetime.fromtimestamp(blocked_until).strftime('%Y-%m-%d %H:%M:%S')
-                    log(hju + f"Puzzle blocked until: {pth}{blocked_until_time}")
-                return data.get("rating_award", 0)
-            return 0
-        except FileNotFoundError:
-            log(mrh + f"Error: {pth}puzzle.txt {mrh}file not found.")
-            return 0
-        except Exception as e:
-            log(mrh + f"Unexpected error: {pth}{str(e)}")
-            return 0
+
+        if data:
+            if data.get("correct", False):
+                return True
+
+            detail = data.get("detail", {})
+            blocked_until = detail.get("blocked_until")
+
+            if blocked_until is not None:
+                blocked_until_time = datetime.fromtimestamp(blocked_until).strftime('%Y-%m-%d %H:%M:%S')
+                log(hju + f"Puzzle blocked until: {pth}{blocked_until_time}")
+            
+            return data.get("rating_award", 0)
+        
+        return 0
       
     def gcs(self, token, tele_id, proxies=None):
         url = f"https://major.bot/api/users/{tele_id}/"
@@ -300,7 +297,15 @@ class Major:
             log_line()
 
             for idx, account in enumerate(accounts):
+                if self.proxies:
+                    proxy = random.choice(self.proxies)
+                    host = proxy['host']
+                    port = proxy['port']
+                else:
+                    host, port = "No proxy", ""
+
                 log(hju + f"Account: {bru}{idx + 1}/{len(accounts)}")
+                log(hju + f"Using proxy: {pth}{host}:{port}")
                 log(htm + "~" * 38)
 
                 try:
@@ -351,14 +356,12 @@ class Major:
                             durov_puzzle = self.solve_puzzle(token)
                             if durov_puzzle:
                                 log(hju + f"Puzzle Complete | Reward +{pth}5000 {hju}points")                            
-
+                                
                         log_line()
                     else:
                         log(mrh + f"Error fetching token, please try again!")
                 except Exception as e:
                     log(mrh + f"Error: {kng}{e}")
-                    log(pth + "~" * 38)
-
                 countdown_timer(self.account_delay)
             countdown_timer(self.wait_time)
 
